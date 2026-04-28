@@ -3,9 +3,8 @@
 These scripts run the baseline experiments from the paper on Slurm with a single A6000.
 
 Common settings:
-- 1x A6000 GPU
-- 128GB RAM
-- 12 CPU cores
+- LLM jobs: 1x A6000 GPU, 128GB RAM, 12 CPU cores
+- Non-LLM jobs: 1x A5000 GPU, 32-64GB RAM, 8 CPU cores
 
 Suggested usage:
 
