@@ -171,7 +171,9 @@ def run_multi_systems(config: DictConfig) -> None:
                                 ) as f_traj:
                                     json.dump(result, f_traj, indent=2)
                                 # Only plot phase diagrams with 4 or fewer elements
-                                num_elements = len(result["final_env_state"].get("elements", []))
+                                num_elements = len(
+                                    result["final_env_state"].get("elements", [])
+                                )
                                 if num_elements <= 4:
                                     phase_diagram = PhaseDiagram(
                                         [
@@ -181,13 +183,18 @@ def run_multi_systems(config: DictConfig) -> None:
                                             ]
                                         ]
                                     )
-                                    fig = phase_diagram.get_plot(
-                                        backend="plotly", show_unstable=1.0
-                                    )
-                                    fig.write_image(
-                                        trajectories_dir
-                                        / f"phase_diagram_episode_{ep:03d}.png"
-                                    )
+                        fig = phase_diagram.get_plot(
+                            backend="plotly", show_unstable=1.0
+                        )
+                        try:
+                            fig.write_image(
+                                trajectories_dir / f"phase_diagram_episode_{ep:03d}.png"
+                            )
+                        except Exception as exc:
+                            logger.warning(
+                                "Skipping phase diagram image export: %s",
+                                exc,
+                            )
                 else:
                     for ep in tqdm.trange(num_episodes, desc=f"Episodes ({system_id})"):
                         result = rb.run_episode.local(
@@ -202,7 +209,9 @@ def run_multi_systems(config: DictConfig) -> None:
                         ) as f_traj:
                             json.dump(result, f_traj, indent=2)
                         # Only plot phase diagrams with 4 or fewer elements
-                        num_elements = len(result["final_env_state"].get("elements", []))
+                        num_elements = len(
+                            result["final_env_state"].get("elements", [])
+                        )
                         if num_elements <= 4:
                             phase_diagram = PhaseDiagram(
                                 [
@@ -234,7 +243,13 @@ def run_multi_systems(config: DictConfig) -> None:
                     [PDEntry.from_dict(e) for e in first_result["phase_diagram_gt"]]
                 )
                 fig_gt = phase_diagram_gt.get_plot(backend="plotly", show_unstable=1.0)
-                fig_gt.write_image(summary_dir / "phase_diagram_gt.png")
+                try:
+                    fig_gt.write_image(summary_dir / "phase_diagram_gt.png")
+                except Exception as exc:
+                    logger.warning(
+                        "Skipping phase diagram GT image export: %s",
+                        exc,
+                    )
 
             # Write per-system episodes metrics
             with open(summary_dir / "episodes.json", "w") as f_json:

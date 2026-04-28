@@ -1,4 +1,4 @@
-_target_: made.oracles.MACEOracle
+_target_: made.oracles.mace.mace_oracle.MACEOracle
 # Model type: "mp" (Materials Project), "off" (Organic Force Field), or "custom"
 model_name: mp
 # Model size: "small", "medium", "large", or custom model name
@@ -24,4 +24,3 @@ relax_kwargs:
 # Number of worker threads for parallel evaluation (1 = sequential, >1 = parallel)
 # Structures will be automatically batched across workers
 num_workers: 1
-
