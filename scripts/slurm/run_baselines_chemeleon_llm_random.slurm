@@ -18,6 +18,7 @@ source .venv/bin/activate
 export CHEMELEON_CKPT_DIR="${HOME}/.cache/chemeleon_dng/ckpts"
 export CHEMELEON_HF_REPO="${CHEMELEON_HF_REPO:-G-reen/chemeleon_reupload}"
 export CHEMELEON_HF_DIR="${CHEMELEON_HF_DIR:-${HOME}/.cache/chemeleon_dng/hf}"
+export CHEMELEON_TASK="${CHEMELEON_TASK:-csp}"
 find "${CHEMELEON_CKPT_DIR}" -name "*.tar.gz" -size 0 -print -delete 2>/dev/null || true
 
 find_chemeleon_ckpt() {
@@ -27,16 +28,19 @@ from pathlib import Path
 import sys
 
 base = Path(os.environ["CHEMELEON_CKPT_DIR"])
+task = os.environ.get("CHEMELEON_TASK", "csp").lower()
 patterns = ["**/*.ckpt", "**/*.pt", "**/*.pth"]
 matches = []
 for pattern in patterns:
     matches.extend(base.glob(pattern))
 
 matches = [m for m in matches if m.is_file()]
-if not matches:
+task_matches = [m for m in matches if task in m.name.lower()]
+selected = task_matches or matches
+if not selected:
     sys.exit(1)
 
-ckpt_path = sorted(matches, key=lambda p: p.stat().st_size, reverse=True)[0]
+ckpt_path = sorted(selected, key=lambda p: p.stat().st_size, reverse=True)[0]
 print(ckpt_path)
 PY
 }
@@ -66,6 +70,7 @@ from huggingface_hub import snapshot_download
 
 repo_id = os.environ["CHEMELEON_HF_REPO"]
 local_dir = os.environ["CHEMELEON_HF_DIR"]
+task = os.environ.get("CHEMELEON_TASK", "csp").lower()
 env_file = Path(os.environ["CHEMELEON_ENV_FILE"]) if "CHEMELEON_ENV_FILE" in os.environ else Path(local_dir) / "chemeleon_ckpt_env.sh"
 
 snapshot_download(repo_id=repo_id, local_dir=local_dir, local_dir_use_symlinks=False)
@@ -79,7 +84,9 @@ for pattern in patterns:
 if not matches:
     raise RuntimeError(f"No checkpoint files found in {base}")
 
-ckpt_path = sorted(matches, key=lambda p: p.stat().st_size, reverse=True)[0]
+task_matches = [m for m in matches if task in m.name.lower()]
+selected = task_matches or matches
+ckpt_path = sorted(selected, key=lambda p: p.stat().st_size, reverse=True)[0]
 env_file.write_text(f'export CHEMELEON_CKPT_PATH="{ckpt_path}"\n')
 print(ckpt_path)
 PY
