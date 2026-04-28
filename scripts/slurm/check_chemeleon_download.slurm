@@ -24,15 +24,24 @@ export CHEMELEON_CKPT_DIR="${HOME}/.cache/chemeleon_dng/ckpts"
 CHEMELEON_CACHE="$(dirname "${CHEMELEON_CKPT_DIR}")"
 mkdir -p "${CHEMELEON_CKPT_DIR}"
 
-CHEMELEON_TAR_URL="https://figshare.com/ndownloader/files/39307959"
+CHEMELEON_TAR_URL="${CHEMELEON_TAR_URL:-https://figshare.com/ndownloader/files/54966305}"
 CHEMELEON_TAR_FILE="${CHEMELEON_CKPT_DIR}/checkpoints.tar.gz"
 
-if [[ ! -s "${CHEMELEON_TAR_FILE}" ]]; then
-  echo "Downloading Chemeleon checkpoints..."
-  curl -L --retry 5 --retry-delay 5 --fail -o "${CHEMELEON_TAR_FILE}" "${CHEMELEON_TAR_URL}"
-fi
+if [[ -n "${CHEMELEON_CKPT_PATH:-}" && -f "${CHEMELEON_CKPT_PATH}" ]]; then
+  echo "Using pre-downloaded Chemeleon checkpoint: ${CHEMELEON_CKPT_PATH}"
+elif [[ -n "$(ls -A "${CHEMELEON_CKPT_DIR}" 2>/dev/null)" ]]; then
+  echo "Using existing Chemeleon checkpoints in ${CHEMELEON_CKPT_DIR}"
+else
+  if [[ ! -s "${CHEMELEON_TAR_FILE}" ]]; then
+    echo "Downloading Chemeleon checkpoints..."
+    curl -L --retry 5 --retry-delay 5 --fail -o "${CHEMELEON_TAR_FILE}" "${CHEMELEON_TAR_URL}"
+  fi
 
-if [[ -z "$(ls -A "${CHEMELEON_CKPT_DIR}" 2>/dev/null)" ]]; then
+  if [[ ! -s "${CHEMELEON_TAR_FILE}" ]]; then
+    echo "Chemeleon download failed or empty. Set CHEMELEON_TAR_URL or CHEMELEON_CKPT_PATH." >&2
+    exit 1
+  fi
+
   echo "Extracting Chemeleon checkpoints..."
   tar -xzf "${CHEMELEON_TAR_FILE}" -C "${CHEMELEON_CACHE}"
 fi
@@ -46,15 +55,18 @@ from chemeleon_dng import sample
 from chemeleon_dng.diffusion.diffusion_module import DiffusionModule
 from chemeleon_dng.download_util import get_checkpoint_path
 
-ckpt_dir = os.environ.get("CHEMELEON_CKPT_DIR")
-kwargs = {}
-if ckpt_dir:
-    params = inspect.signature(get_checkpoint_path).parameters
-    if "ckpt_dir" in params:
-        kwargs["ckpt_dir"] = ckpt_dir
-
-ckpt_path = get_checkpoint_path("csp", sample.DEFAULT_MODEL_PATH, **kwargs)
-ckpt_path = Path(ckpt_path)
+ckpt_path_override = os.environ.get("CHEMELEON_CKPT_PATH")
+if ckpt_path_override:
+    ckpt_path = Path(ckpt_path_override)
+else:
+    ckpt_dir = os.environ.get("CHEMELEON_CKPT_DIR")
+    kwargs = {}
+    if ckpt_dir:
+        params = inspect.signature(get_checkpoint_path).parameters
+        if "ckpt_dir" in params:
+            kwargs["ckpt_dir"] = ckpt_dir
+    ckpt_path = get_checkpoint_path("csp", sample.DEFAULT_MODEL_PATH, **kwargs)
+    ckpt_path = Path(ckpt_path)
 print(f"Checkpoint path: {ckpt_path}")
 print(f"Checkpoint exists: {ckpt_path.exists()}")
 

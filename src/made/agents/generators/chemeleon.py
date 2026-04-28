@@ -56,22 +56,31 @@ class ChemeleonGenerator(Generator):
         from chemeleon_dng.diffusion.diffusion_module import DiffusionModule
         from chemeleon_dng.download_util import get_checkpoint_path
 
-        if os.environ.get("CHEMELEON_SKIP_DOWNLOAD"):
-            raise RuntimeError(
-                "Chemeleon checkpoints missing. Download is disabled via "
-                "CHEMELEON_SKIP_DOWNLOAD; set this only after pre-downloading."
+        ckpt_path_override = os.environ.get("CHEMELEON_CKPT_PATH")
+        if ckpt_path_override:
+            override_path = Path(ckpt_path_override)
+            if not override_path.exists():
+                raise RuntimeError(
+                    f"CHEMELEON_CKPT_PATH was set but does not exist: {override_path}"
+                )
+            model_path = str(override_path)
+        else:
+            if os.environ.get("CHEMELEON_SKIP_DOWNLOAD"):
+                raise RuntimeError(
+                    "Chemeleon checkpoints missing. Download is disabled via "
+                    "CHEMELEON_SKIP_DOWNLOAD; set this only after pre-downloading."
+                )
+
+            ckpt_dir = os.environ.get("CHEMELEON_CKPT_DIR")
+            ckpt_kwargs: dict[str, Any] = {}
+            if ckpt_dir:
+                params = inspect.signature(get_checkpoint_path).parameters
+                if "ckpt_dir" in params:
+                    ckpt_kwargs["ckpt_dir"] = ckpt_dir
+
+            model_path = get_checkpoint_path(
+                self.task, sample.DEFAULT_MODEL_PATH, **ckpt_kwargs
             )
-
-        ckpt_dir = os.environ.get("CHEMELEON_CKPT_DIR")
-        ckpt_kwargs: dict[str, Any] = {}
-        if ckpt_dir:
-            params = inspect.signature(get_checkpoint_path).parameters
-            if "ckpt_dir" in params:
-                ckpt_kwargs["ckpt_dir"] = ckpt_dir
-
-        model_path = get_checkpoint_path(
-            self.task, sample.DEFAULT_MODEL_PATH, **ckpt_kwargs
-        )
         self.dm = DiffusionModule.load_from_checkpoint(
             model_path, map_location=self.device
         )

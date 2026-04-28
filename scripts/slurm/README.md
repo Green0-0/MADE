@@ -21,6 +21,7 @@ Notes:
 - If your cluster uses a different venv path, edit `source .venv/bin/activate`.
 - The scripts `cd` to `${SLURM_SUBMIT_DIR}` so they run from the repo root.
 - Chemeleon checkpoints are pre-downloaded from Figshare to `${HOME}/.cache/chemeleon_dng`.
+- Override the download URL by setting `CHEMELEON_TAR_URL` or bypass download entirely with `CHEMELEON_CKPT_PATH`.
 - The LLM scripts start and stop their own vLLM instance.
 - The vLLM server listens on `127.0.0.1:8000` by default; adjust `OPENAI_BASE_URL`
   if your endpoint is different.
