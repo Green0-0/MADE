@@ -19,6 +19,7 @@ export MODEL_NAME="Qwen/Qwen3.5-27B-GPTQ-Int4"
 export VLLM_HOST="127.0.0.1"
 export VLLM_PORT="8000"
 export OPENAI_BASE_URL="http://${VLLM_HOST}:${VLLM_PORT}/v1"
+export OPENAI_API_KEY="${OPENAI_API_KEY:-local}"
 
 python -m vllm.entrypoints.openai.api_server \
   --host "${VLLM_HOST}" \

@@ -15,10 +15,27 @@ cd "${SLURM_SUBMIT_DIR:-$PWD}"
 
 source .venv/bin/activate
 
+if ! command -v uv >/dev/null 2>&1; then
+  echo "uv not found in PATH" >&2
+  exit 1
+fi
+
+python - <<'PY'
+import importlib
+import sys
+
+try:
+    importlib.import_module("vllm")
+except Exception as exc:
+    print(f"vllm import failed: {exc}", file=sys.stderr)
+    raise
+PY
+
 export MODEL_NAME="Qwen/Qwen3.5-27B-GPTQ-Int4"
 export VLLM_HOST="127.0.0.1"
 export VLLM_PORT="8000"
 export OPENAI_BASE_URL="http://${VLLM_HOST}:${VLLM_PORT}/v1"
+export OPENAI_API_KEY="${OPENAI_API_KEY:-local}"
 
 cleanup_vllm() {
   if [[ -n "${VLLM_PID:-}" ]]; then
@@ -59,6 +76,11 @@ while time.time() < deadline:
 
 raise SystemExit(f"vLLM did not become ready: {last_error}")
 PY
+
+if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
+  echo "vLLM process exited before baseline run" >&2
+  exit 1
+fi
 
 uv run scripts/run_baseline_experiments.py \
   --agent-configs llm_react_orchestrator \
