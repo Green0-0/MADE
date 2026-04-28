@@ -18,11 +18,34 @@ source .venv/bin/activate
 export CHEMELEON_CKPT_DIR="${HOME}/.cache/chemeleon_dng/ckpts"
 export CHEMELEON_HF_REPO="${CHEMELEON_HF_REPO:-G-reen/chemeleon_reupload}"
 export CHEMELEON_HF_DIR="${CHEMELEON_HF_DIR:-${HOME}/.cache/chemeleon_dng/hf}"
+find "${CHEMELEON_CKPT_DIR}" -name "*.tar.gz" -size 0 -print -delete 2>/dev/null || true
+
+find_chemeleon_ckpt() {
+  python - <<'PY'
+import os
+from pathlib import Path
+import sys
+
+base = Path(os.environ["CHEMELEON_CKPT_DIR"])
+patterns = ["**/*.ckpt", "**/*.pt", "**/*.pth"]
+matches = []
+for pattern in patterns:
+    matches.extend(base.glob(pattern))
+
+matches = [m for m in matches if m.is_file()]
+if not matches:
+    sys.exit(1)
+
+ckpt_path = sorted(matches, key=lambda p: p.stat().st_size, reverse=True)[0]
+print(ckpt_path)
+PY
+}
 
 if [[ -n "${CHEMELEON_CKPT_PATH:-}" && -f "${CHEMELEON_CKPT_PATH}" ]]; then
   echo "Using pre-downloaded Chemeleon checkpoint: ${CHEMELEON_CKPT_PATH}"
-elif [[ -n "$(ls -A "${CHEMELEON_CKPT_DIR}" 2>/dev/null)" ]]; then
-  echo "Using existing Chemeleon checkpoints in ${CHEMELEON_CKPT_DIR}"
+elif CHEMELEON_CKPT_PATH=$(find_chemeleon_ckpt); then
+  export CHEMELEON_CKPT_PATH
+  echo "Using existing Chemeleon checkpoint: ${CHEMELEON_CKPT_PATH}"
 else
   if ! python - <<'PY'
 try:
@@ -36,7 +59,7 @@ PY
 
   CHEMELEON_ENV_FILE="${CHEMELEON_HF_DIR}/chemeleon_ckpt_env.sh"
   mkdir -p "${CHEMELEON_HF_DIR}"
-  python - <<'PY'
+  CHEMELEON_CKPT_PATH=$(python - <<'PY'
 import os
 from pathlib import Path
 from huggingface_hub import snapshot_download
@@ -58,10 +81,12 @@ if not matches:
 
 ckpt_path = sorted(matches, key=lambda p: p.stat().st_size, reverse=True)[0]
 env_file.write_text(f'export CHEMELEON_CKPT_PATH="{ckpt_path}"\n')
-print(f"Selected checkpoint: {ckpt_path}")
+print(ckpt_path)
 PY
+  )
 
-  source "${CHEMELEON_ENV_FILE}"
+  export CHEMELEON_CKPT_PATH
+  echo "Selected checkpoint from HF: ${CHEMELEON_CKPT_PATH}"
 fi
 
 uv run scripts/run_baseline_experiments.py \

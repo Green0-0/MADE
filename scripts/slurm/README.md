@@ -22,6 +22,7 @@ Notes:
 - The scripts `cd` to `${SLURM_SUBMIT_DIR}` so they run from the repo root.
 - Chemeleon checkpoints are pulled from `G-reen/chemeleon_reupload` on Hugging Face.
 - Override with `CHEMELEON_HF_REPO` or set `CHEMELEON_CKPT_PATH` to use a local file.
+- Empty legacy tarballs in `CHEMELEON_CKPT_DIR` are removed automatically.
 - The LLM scripts start and stop their own vLLM instance.
 - The vLLM server listens on `127.0.0.1:8000` by default; adjust `OPENAI_BASE_URL`
   if your endpoint is different.
