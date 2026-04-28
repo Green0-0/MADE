@@ -15,6 +15,8 @@ cd "${SLURM_SUBMIT_DIR:-$PWD}"
 
 source .venv/bin/activate
 
+find "${HOME}/.cache" -name "checkpoints.tar.gz" -size 0 -print -delete || true
+
 if ! command -v uv >/dev/null 2>&1; then
   echo "uv not found in PATH" >&2
   exit 1

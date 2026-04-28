@@ -15,6 +15,8 @@ cd "${SLURM_SUBMIT_DIR:-$PWD}"
 
 source .venv/bin/activate
 
+find "${HOME}/.cache" -name "checkpoints.tar.gz" -size 0 -print -delete || true
+
 uv run scripts/run_baseline_experiments.py \
   --agent-configs chemeleon_mlip_ranking_chain_filter \
   --systems-file ./data/systems_10_mp_20/systems_ternary_n10_maxatoms20_intermetallic_smact.json \

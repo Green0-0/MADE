@@ -49,12 +49,8 @@ image = (
         "wandb>=0.21.1",
         "uv",
     )
-    .pip_install(
-        "chemeleon-dng @ git+https://github.com/hspark1212/chemeleon-dng.git"
-    )
-    .run_commands(
-    "ln -sf /ckpts/chemeleon/ckpts /root/ckpts"
-    )
+    .pip_install("chemeleon-dng @ git+https://github.com/hspark1212/chemeleon-dng.git")
+    .run_commands("ln -sf /ckpts/chemeleon/ckpts /root/ckpts")
     .add_local_dir("./data", "/root/data")
     .add_local_dir("./src", "/root/src")
     .add_local_python_source("made")
@@ -63,9 +59,13 @@ image = (
 app = modal.App("benchmark-runner", image=image)
 
 # Create a volume for checkpointing episodes
-checkpoint_volume = modal.Volume.from_name("benchmark-checkpoints", create_if_missing=True)
+checkpoint_volume = modal.Volume.from_name(
+    "benchmark-checkpoints", create_if_missing=True
+)
 
-model_checkpoints_volume = modal.Volume.from_name("matopt-checkpoints", create_if_missing=True)
+model_checkpoints_volume = modal.Volume.from_name(
+    "matopt-checkpoints", create_if_missing=True
+)
 
 
 def flatten_dict(d, parent_key="", sep="_"):
@@ -94,20 +94,20 @@ def get_checkpoint_dir() -> Path:
 
 
 def get_checkpoint_path(
-    episode_id: int,
-    run_name: str,
-    system_id: str | None = None
+    episode_id: int, run_name: str, system_id: str | None = None
 ) -> Path:
     """Get the checkpoint file path for an episode.
-    
+
     Structure: /checkpoints/{run_name}/{system_id}/episode_{episode_id:03d}/checkpoint.json
-    
-    Checkpoints are organized by run name (top-level), system_id (second level), 
+
+    Checkpoints are organized by run name (top-level), system_id (second level),
     and episode ID (subfolder) to prevent conflicts and ensure correct config loading.
     """
     checkpoint_dir = get_checkpoint_dir()
     if system_id:
-        episode_dir = checkpoint_dir / run_name / system_id / f"episode_{episode_id:03d}"
+        episode_dir = (
+            checkpoint_dir / run_name / system_id / f"episode_{episode_id:03d}"
+        )
     else:
         episode_dir = checkpoint_dir / run_name / f"episode_{episode_id:03d}"
     episode_dir.mkdir(parents=True, exist_ok=True)
@@ -116,12 +116,10 @@ def get_checkpoint_path(
 
 
 def find_checkpoint_by_episode(
-    episode_id: int,
-    run_name: str,
-    system_id: str | None = None
+    episode_id: int, run_name: str, system_id: str | None = None
 ) -> tuple[Path | None, dict[str, Any] | None]:
     """Find checkpoint by episode_id in the specified run_name folder.
-    
+
     Returns:
         Tuple of (checkpoint_path, checkpoint_data) or (None, None) if not found.
     """
@@ -179,11 +177,9 @@ def load_checkpoint(checkpoint_path: Path) -> dict[str, Any] | None:
         return None
 
 
-def restore_environment_from_trajectory(
-    env, trajectory: list[dict[str, Any]]
-) -> None:
+def restore_environment_from_trajectory(env, trajectory: list[dict[str, Any]]) -> None:
     """Restore environment state by replaying trajectory.
-    
+
     Note: The environment's oracle will be called again during replay.
     If the oracle is deterministic and/or has caching, results should match.
     """
@@ -226,7 +222,7 @@ def run_episode(
     system_id: str | None = None,
 ) -> None:
     """Run a single episode on a modal cluster.
-    
+
     Args:
         config: Hydra config
         episode_id: Episode number
@@ -244,7 +240,9 @@ def run_episode(
     )
 
     # Check for existing checkpoint first to get wandb run ID if resuming
-    checkpoint_path, checkpoint = find_checkpoint_by_episode(episode_id, wandb_run_name, system_id)
+    checkpoint_path, checkpoint = find_checkpoint_by_episode(
+        episode_id, wandb_run_name, system_id
+    )
     wandb_run_id = None
 
     if checkpoint is not None:
@@ -257,7 +255,7 @@ def run_episode(
         # Finish any active run before starting/resuming
         if wandb.run is not None:
             wandb.finish()
-        
+
         if wandb_run_id:
             # Resume existing wandb run
             logger.info(f"Resuming wandb run with ID: {wandb_run_id}")
@@ -337,10 +335,20 @@ def run_episode(
             metrics_history = None
             if hasattr(env, "get_metrics_history"):
                 metrics_history = env.get_metrics_history()
-            save_checkpoint(checkpoint_path, agent_state, env_state, trajectory, query_count, wandb_run_id, metrics_history, config)
+            save_checkpoint(
+                checkpoint_path,
+                agent_state,
+                env_state,
+                trajectory,
+                query_count,
+                wandb_run_id,
+                metrics_history,
+                config,
+            )
             # Commit volume to persist checkpoint (only on Modal)
             try:
-                checkpoint_volume.commit()
+                if config.experiment.infra == "modal":
+                    checkpoint_volume.commit()
             except NameError:
                 # checkpoint_volume not available (local execution)
                 pass
@@ -372,6 +380,7 @@ def run_episode(
                 wandb.save(tmp_trajectory_file, policy="live")
     except KeyboardInterrupt:
         import traceback
+
         logger.warning(
             f"Keyboard interrupt, stopping episode part way through. Stack trace: {traceback.format_exc()}"
         )
@@ -381,9 +390,19 @@ def run_episode(
         metrics_history = None
         if hasattr(env, "get_metrics_history"):
             metrics_history = env.get_metrics_history()
-        save_checkpoint(checkpoint_path, agent_state, env_state, trajectory, query_count, wandb_run_id, metrics_history, config)
+        save_checkpoint(
+            checkpoint_path,
+            agent_state,
+            env_state,
+            trajectory,
+            query_count,
+            wandb_run_id,
+            metrics_history,
+            config,
+        )
         try:
-            checkpoint_volume.commit()
+            if config.experiment.infra == "modal":
+                checkpoint_volume.commit()
         except NameError:
             pass
         logger.info("Checkpoint saved before exit")
@@ -412,11 +431,14 @@ def run_episode(
     # Clean up checkpoint file after successful completion
     if checkpoint_path.exists():
         checkpoint_path.unlink()
-        logger.info(f"Removed checkpoint file {checkpoint_path} after successful completion")
-        try:
+        logger.info(
+            f"Removed checkpoint file {checkpoint_path} after successful completion"
+        )
+    try:
+        if config.experiment.infra == "modal":
             checkpoint_volume.commit()
-        except NameError:
-            pass
+    except NameError:
+        pass
 
     return results
 
@@ -493,7 +515,9 @@ def run_benchmark(config: DictConfig) -> None:
                             ]
                         )
                         # Only plot phase diagrams with 4 or fewer elements
-                        num_elements = len(result["final_env_state"].get("elements", []))
+                        num_elements = len(
+                            result["final_env_state"].get("elements", [])
+                        )
                         if num_elements <= 4:
                             fig = phase_diagram.get_plot(
                                 backend="plotly", show_unstable=1.0
@@ -584,7 +608,7 @@ def run_benchmark(config: DictConfig) -> None:
         # Finish any active run before resuming the overall run
         if wandb.run is not None:
             wandb.finish()
-        
+
         # resume the overall run
         wandb.init(
             project=config.logger.get("wandb_project", "made-benchmark"),
