@@ -12,6 +12,7 @@ llm_config:
   max_output_tokens: null
   temperature: null
   cache: false  # cache responses in dspy
+  base_url: null  # optional, for OpenAI-compatible endpoints
 
 # how to parse the state for the LLM
 context_config:

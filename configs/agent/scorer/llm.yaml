@@ -6,6 +6,7 @@ llm_config:
   max_output_tokens: null
   temperature: null
   cache: false
+  base_url: null  # optional, for OpenAI-compatible endpoints
 
 # Context window management - random sample if exceeded
 max_candidates: 50  # Max candidates to show LLM (null = no limit)
@@ -32,4 +33,3 @@ context_config:
   include_composition_counter: true
   include_recent_trial: true
   previous_observations: 1 
-

@@ -9,6 +9,7 @@ import dspy
 from pymatgen.core.structure import Structure
 
 from ...utils.llm import (
+    build_dspy_lm,
     summarize_candidates_for_llm,
     summarize_context_for_llm,
 )
@@ -98,12 +99,7 @@ class LLMScorer(Scorer):
             raise ValueError("No candidates provided")
 
         with dspy.settings.context(
-            lm=dspy.LM(
-                model=self.llm_config.model,
-                max_tokens=self.llm_config.max_output_tokens,
-                temperature=self.llm_config.temperature,
-                cache=self.llm_config.cache,
-            )
+            lm=build_dspy_lm(self.llm_config, default_model="openai/gpt-5.1")
         ):
             stability_tolerance = state.get("stability_tolerance", 1e-8)
             context = summarize_context_for_llm(

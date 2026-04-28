@@ -2,14 +2,66 @@
 Shared utilities for LLM-based components
 """
 
+import os
 import random
 from collections import Counter
+from collections.abc import Mapping
 from typing import Any
 
+import dspy
 from pymatgen.analysis.phase_diagram import PDEntry, PhaseDiagram
 from pymatgen.core.structure import Structure
 
 from made.utils.convex_hull_utils import safe_e_above_hull
+
+
+def _config_get(config: Any, key: str, default: Any = None) -> Any:
+    if config is None:
+        return default
+    if isinstance(config, Mapping):
+        return config.get(key, default)
+    return getattr(config, key, default)
+
+
+def _set_env_if_present(var_name: str, value: Any) -> None:
+    if value is None:
+        return
+    os.environ[var_name] = str(value)
+
+
+def configure_openai_env(llm_config: Any) -> None:
+    base_url = _config_get(llm_config, "base_url") or _config_get(
+        llm_config, "api_base"
+    )
+    if base_url:
+        _set_env_if_present("OPENAI_BASE_URL", base_url)
+        _set_env_if_present("OPENAI_API_BASE", base_url)
+
+    api_key = _config_get(llm_config, "api_key") or _config_get(
+        llm_config, "openai_api_key"
+    )
+    if api_key:
+        _set_env_if_present("OPENAI_API_KEY", api_key)
+
+
+def build_dspy_lm(llm_config: Any, default_model: str | None = None) -> dspy.LM:
+    configure_openai_env(llm_config)
+
+    model = _config_get(llm_config, "model", default_model)
+    cache = _config_get(llm_config, "cache", True)
+    max_tokens = _config_get(llm_config, "max_output_tokens")
+    temperature = _config_get(llm_config, "temperature")
+
+    kwargs: dict[str, Any] = {"cache": cache}
+    if max_tokens:
+        kwargs["max_tokens"] = max_tokens
+    if temperature is not None:
+        kwargs["temperature"] = temperature
+
+    if model is None:
+        raise ValueError("LLM model must be provided in llm_config")
+
+    return dspy.LM(model, **kwargs)
 
 
 def pd_from_state(state: dict[str, Any]) -> PhaseDiagram | None:

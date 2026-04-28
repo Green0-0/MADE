@@ -34,7 +34,8 @@ Set up API keys or add to .env file:
 export MATERIALS_PROJECT_API_KEY=your_key
 export WANDB_API_KEY=your_key  # optional
 export ANTHROPIC_API_KEY=your_key  # for Anthropic agents
-export OPENAI_API_KEY=your_key  # for OpenAI agents
+export OPENAI_API_KEY=your_key  # for OpenAI-compatible agents
+export OPENAI_BASE_URL=http://localhost:8000/v1  # optional, for local OpenAI-compatible endpoints
 ```
 
 Add these API keys to Modal secrets too if running on Modal.

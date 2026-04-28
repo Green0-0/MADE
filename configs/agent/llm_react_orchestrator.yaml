@@ -49,6 +49,7 @@ llm_config:
   cache: false
   max_output_tokens: null
   temperature: null
+  base_url: null  # optional, for OpenAI-compatible endpoints
 
 # Context configuration with customizable prompts
 context_config:
