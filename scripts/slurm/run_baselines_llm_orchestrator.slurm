@@ -15,7 +15,50 @@ cd "${SLURM_SUBMIT_DIR:-$PWD}"
 
 source .venv/bin/activate
 
-export OPENAI_BASE_URL="http://127.0.0.1:8000/v1"
+export MODEL_NAME="Qwen/Qwen3.5-27B-GPTQ-Int4"
+export VLLM_HOST="127.0.0.1"
+export VLLM_PORT="8000"
+export OPENAI_BASE_URL="http://${VLLM_HOST}:${VLLM_PORT}/v1"
+
+cleanup_vllm() {
+  if [[ -n "${VLLM_PID:-}" ]]; then
+    kill "${VLLM_PID}" || true
+    wait "${VLLM_PID}" 2>/dev/null || true
+  fi
+}
+trap cleanup_vllm EXIT
+
+python -m vllm.entrypoints.openai.api_server \
+  --host "${VLLM_HOST}" \
+  --port "${VLLM_PORT}" \
+  --model "${MODEL_NAME}" \
+  --gpu-memory-utilization 0.90 \
+  --max-model-len 4096 &
+VLLM_PID=$!
+
+python - <<'PY'
+import json
+import time
+import urllib.request
+
+url = "http://127.0.0.1:8000/v1/models"
+deadline = time.time() + 300
+last_error = None
+
+while time.time() < deadline:
+    try:
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            if resp.status == 200:
+                data = json.loads(resp.read().decode("utf-8"))
+                if data.get("data"):
+                    print("vLLM ready")
+                    raise SystemExit(0)
+    except Exception as exc:
+        last_error = exc
+        time.sleep(2)
+
+raise SystemExit(f"vLLM did not become ready: {last_error}")
+PY
 
 uv run scripts/run_baseline_experiments.py \
   --agent-configs llm_react_orchestrator \
