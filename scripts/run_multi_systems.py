@@ -224,9 +224,16 @@ def run_multi_systems(config: DictConfig) -> None:
                             fig = phase_diagram.get_plot(
                                 backend="plotly", show_unstable=1.0
                             )
-                            fig.write_image(
-                                trajectories_dir / f"phase_diagram_episode_{ep:03d}.png"
-                            )
+                            try:
+                                fig.write_image(
+                                    trajectories_dir
+                                    / f"phase_diagram_episode_{ep:03d}.png"
+                                )
+                            except Exception as exc:
+                                logger.warning(
+                                    "Skipping phase diagram image export: %s",
+                                    exc,
+                                )
             except KeyboardInterrupt:
                 import traceback
 

@@ -20,6 +20,7 @@ sbatch scripts/slurm/run_baselines_random_random_random.slurm
 Notes:
 - If your cluster uses a different venv path, edit `source .venv/bin/activate`.
 - The scripts `cd` to `${SLURM_SUBMIT_DIR}` so they run from the repo root.
+- Chemeleon checkpoints are pre-downloaded from Figshare to `${HOME}/.cache/chemeleon_dng`.
 - The LLM scripts start and stop their own vLLM instance.
 - The vLLM server listens on `127.0.0.1:8000` by default; adjust `OPENAI_BASE_URL`
   if your endpoint is different.

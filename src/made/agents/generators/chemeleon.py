@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import inspect
 import logging
+import os
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -54,7 +56,22 @@ class ChemeleonGenerator(Generator):
         from chemeleon_dng.diffusion.diffusion_module import DiffusionModule
         from chemeleon_dng.download_util import get_checkpoint_path
 
-        model_path = get_checkpoint_path(self.task, sample.DEFAULT_MODEL_PATH)
+        if os.environ.get("CHEMELEON_SKIP_DOWNLOAD"):
+            raise RuntimeError(
+                "Chemeleon checkpoints missing. Download is disabled via "
+                "CHEMELEON_SKIP_DOWNLOAD; set this only after pre-downloading."
+            )
+
+        ckpt_dir = os.environ.get("CHEMELEON_CKPT_DIR")
+        ckpt_kwargs: dict[str, Any] = {}
+        if ckpt_dir:
+            params = inspect.signature(get_checkpoint_path).parameters
+            if "ckpt_dir" in params:
+                ckpt_kwargs["ckpt_dir"] = ckpt_dir
+
+        model_path = get_checkpoint_path(
+            self.task, sample.DEFAULT_MODEL_PATH, **ckpt_kwargs
+        )
         self.dm = DiffusionModule.load_from_checkpoint(
             model_path, map_location=self.device
         )

@@ -15,7 +15,27 @@ cd "${SLURM_SUBMIT_DIR:-$PWD}"
 
 source .venv/bin/activate
 
-find "${HOME}/.cache" -name "checkpoints.tar.gz" -size 0 -print -delete || true
+if ! command -v curl >/dev/null 2>&1; then
+  echo "curl not found in PATH" >&2
+  exit 1
+fi
+
+export CHEMELEON_CKPT_DIR="${HOME}/.cache/chemeleon_dng/ckpts"
+CHEMELEON_CACHE="$(dirname "${CHEMELEON_CKPT_DIR}")"
+mkdir -p "${CHEMELEON_CKPT_DIR}"
+
+CHEMELEON_TAR_URL="https://figshare.com/ndownloader/files/39307959"
+CHEMELEON_TAR_FILE="${CHEMELEON_CKPT_DIR}/checkpoints.tar.gz"
+
+if [[ ! -s "${CHEMELEON_TAR_FILE}" ]]; then
+  echo "Downloading Chemeleon checkpoints..."
+  curl -L --retry 5 --retry-delay 5 --fail -o "${CHEMELEON_TAR_FILE}" "${CHEMELEON_TAR_URL}"
+fi
+
+if [[ -z "$(ls -A "${CHEMELEON_CKPT_DIR}" 2>/dev/null)" ]]; then
+  echo "Extracting Chemeleon checkpoints..."
+  tar -xzf "${CHEMELEON_TAR_FILE}" -C "${CHEMELEON_CACHE}"
+fi
 
 uv run scripts/run_baseline_experiments.py \
   --agent-configs chemeleon_mlip_ranking_chain_filter \
