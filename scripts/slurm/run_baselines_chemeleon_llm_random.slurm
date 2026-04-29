@@ -3,6 +3,7 @@
 #SBATCH --output=slurm-%j-chem-llm-rand.out
 #SBATCH --error=slurm-%j-chem-llm-rand.err
 #SBATCH --partition=bhuwan
+#SBATCH --account=bhuwan
 #SBATCH --time=2-00:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
