@@ -2,11 +2,15 @@
 LLM planner.
 """
 
+import json
 import logging
 from typing import Any
 
 import dspy
+import regex
 from pymatgen.core.composition import Composition
+
+from dspy.utils.exceptions import AdapterParseError
 
 from ...utils.llm import build_dspy_lm, summarize_context_for_llm
 from ..base import Plan, Planner
@@ -118,22 +122,49 @@ class LLMPlanner(Planner):
                 include_recent_trial=self.context_config.include_recent_trial,
                 max_entries=self.max_context_entries,
             )
-            pred = self.planner(
-                context=context,
-                elements=state.get("elements", []),
-                max_stoichiometry=self.max_stoichiometry,
-                num_compositions=self.num_compositions,
-                stability_tolerance=stability_tolerance,
-            )
-            self.history.append(pred.toDict())
+            try:
+                pred = self.planner(
+                    context=context,
+                    elements=state.get("elements", []),
+                    max_stoichiometry=self.max_stoichiometry,
+                    num_compositions=self.num_compositions,
+                    stability_tolerance=stability_tolerance,
+                )
+                pred_dict = pred.toDict() if hasattr(pred, "toDict") else {}
+                pred_compositions = getattr(pred, "compositions", [])
+                pred_reasoning = getattr(pred, "reasoning", None)
+            except AdapterParseError as exc:
+                logger.warning(
+                    "LLMPlanner parse error; attempting JSON recovery: %s",
+                    exc,
+                )
+                pred_dict = _recover_llm_json(exc.lm_response)
+                pred_compositions = pred_dict.get("compositions", [])
+                pred_reasoning = pred_dict.get("reasoning")
+
+            if not isinstance(pred_compositions, list):
+                pred_compositions = [str(pred_compositions)]
+
+            if pred_dict:
+                self.history.append(pred_dict)
+            else:
+                self.history.append(
+                    {
+                        "compositions": pred_compositions,
+                        "reasoning": pred_reasoning,
+                    }
+                )
+
             logger.info(
-                f"LLMPlanner proposed compositions: {pred.compositions}, reasoning: {pred.reasoning}"
+                "LLMPlanner proposed compositions: %s, reasoning: %s",
+                pred_compositions,
+                pred_reasoning,
             )
 
         # Parse compositions and validate against constraints
         allowed_elements = set(state.get("elements", []))
         valid_compositions = []
-        for comp_str in pred.compositions:
+        for comp_str in pred_compositions:
             try:
                 comp = Composition(comp_str)
 
@@ -166,7 +197,7 @@ class LLMPlanner(Planner):
         if not valid_compositions:
             logger.error(
                 f"LLMPlanner: No valid compositions after filtering. "
-                f"Original proposals: {pred.compositions}"
+                f"Original proposals: {pred_compositions}"
                 f"defaulting to equal composition plan"
             )
             # Fallback: return default equal composition plan
@@ -179,6 +210,42 @@ class LLMPlanner(Planner):
             compositions=valid_compositions,
             num_candidates=self.num_candidates,
         )
+
+
+def _recover_llm_json(text: str) -> dict[str, Any]:
+    payload = _extract_json_object(text)
+    try:
+        import json_repair  # type: ignore
+
+        data = json_repair.loads(payload)
+    except Exception:
+        try:
+            data = json.loads(payload)
+        except Exception:
+            return {}
+
+    if not isinstance(data, dict):
+        return {}
+
+    compositions = data.get("compositions", [])
+    if compositions is None:
+        compositions = []
+
+    if not isinstance(compositions, list):
+        compositions = [str(compositions)]
+
+    return {
+        "reasoning": data.get("reasoning"),
+        "compositions": compositions,
+    }
+
+
+def _extract_json_object(text: str) -> str:
+    pattern = r"\{(?:[^{}]|(?R))*\}"
+    match = regex.search(pattern, text, regex.DOTALL)
+    if match:
+        return match.group(0)
+    return text
 
     def get_state(self) -> dict[str, Any]:
         """Get full state including history for checkpointing."""

@@ -920,7 +920,12 @@ class LLMReActOrchestratorAgent(Agent):
         """Setup DSPy LM."""
         try:
             self.lm = build_dspy_lm(self.llm_config, default_model="openai/gpt-5.1")
-            logger.info(f"[LLMReActOrchestrator] DSPy LM: {self.lm.model_id}")
+            model_id = (
+                getattr(self.lm, "model_id", None)
+                or getattr(self.lm, "model", None)
+                or str(self.lm)
+            )
+            logger.info(f"[LLMReActOrchestrator] DSPy LM: {model_id}")
         except Exception as e:
             logger.error(f"[LLMReActOrchestrator] Failed to initialize DSPy LM: {e}")
             raise
