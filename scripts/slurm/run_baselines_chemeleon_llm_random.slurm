@@ -2,7 +2,7 @@
 #SBATCH --job-name=made_chem_llm_rand
 #SBATCH --output=slurm-%j-chem-llm-rand.out
 #SBATCH --error=slurm-%j-chem-llm-rand.err
-#SBATCH --partition=dhingra
+#SBATCH --partition=bhuwan
 #SBATCH --time=2-00:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

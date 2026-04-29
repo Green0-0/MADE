@@ -2,7 +2,7 @@
 #SBATCH --job-name=vllm_qwen35_27b_int4
 #SBATCH --output=slurm-%j-vllm.out
 #SBATCH --error=slurm-%j-vllm.err
-#SBATCH --partition=dhingra
+#SBATCH --partition=bhuwan
 #SBATCH --time=2-00:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1

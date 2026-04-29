@@ -2,7 +2,7 @@
 #SBATCH --job-name=made_llm_orch
 #SBATCH --output=slurm-%j-llm-orch.out
 #SBATCH --error=slurm-%j-llm-orch.err
-#SBATCH --partition=dhingra
+#SBATCH --partition=bhuwan
 #SBATCH --time=2-00:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
