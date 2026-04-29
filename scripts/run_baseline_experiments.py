@@ -30,7 +30,9 @@ def save_progress(
         "status": status,
         "completed_systems": completed_systems,
         "total_systems": total_systems,
-        "progress_percent": len(completed_systems) / total_systems * 100 if total_systems > 0 else 0.0,
+        "progress_percent": len(completed_systems) / total_systems * 100
+        if total_systems > 0
+        else 0.0,
         "timestamp": datetime.now().isoformat(),
     }
     with open(progress_file, "w") as f:
@@ -67,6 +69,7 @@ def run_single_baseline_experiment(
     wandb_project: str = "made-baselines",
     wandb_tags: list[str] | None = None,
     resume: bool = True,
+    hydra_overrides: list[str] | None = None,
 ) -> Path:
     """
     Run a single baseline experiment.
@@ -88,7 +91,10 @@ def run_single_baseline_experiment(
         Path to output directory
     """
     # Create output directory (timestamp is already in output_base_dir)
-    output_dir = Path(output_base_dir) / f"{agent_config}_{Path(systems_file).stem}_{max_systems}systems_{budget}queries_{int(stability_tolerance * 1000)}stabilitymeV"
+    output_dir = (
+        Path(output_base_dir)
+        / f"{agent_config}_{Path(systems_file).stem}_{max_systems}systems_{budget}queries_{int(stability_tolerance * 1000)}stabilitymeV"
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info(f"Running experiment: {agent_config}")
@@ -124,6 +130,9 @@ def run_single_baseline_experiment(
         tags_str = ",".join(wandb_tags)
         config_overrides.append(f"logger.wandb_tags=[{tags_str}]")
 
+    if hydra_overrides:
+        config_overrides.extend(hydra_overrides)
+
     # Save experiment metadata
     metadata = {
         "agent_config": agent_config,
@@ -144,7 +153,9 @@ def run_single_baseline_experiment(
     if resume:
         completed_systems = get_completed_systems(output_dir)
         if completed_systems:
-            logger.info(f"Found {len(completed_systems)} completed systems, will resume from existing results")
+            logger.info(
+                f"Found {len(completed_systems)} completed systems, will resume from existing results"
+            )
 
     # Initialize progress tracking
     save_progress(output_dir, completed_systems, max_systems, status="starting")
@@ -175,17 +186,24 @@ def run_single_baseline_experiment(
         last_completed_count = len(completed_systems)
         last_progress_update = datetime.now()
         for line in process.stdout:
-            print(line, end='')  # Print to console
+            print(line, end="")  # Print to console
             # Check for completed systems periodically (every 30 seconds or on system completion)
             current_time = datetime.now()
             time_since_update = (current_time - last_progress_update).total_seconds()
             if "Running system" in line or time_since_update > 30:
                 current_completed = get_completed_systems(output_dir)
-                if len(current_completed) > last_completed_count or time_since_update > 30:
+                if (
+                    len(current_completed) > last_completed_count
+                    or time_since_update > 30
+                ):
                     last_completed_count = len(current_completed)
                     last_progress_update = current_time
-                    save_progress(output_dir, current_completed, max_systems, status="in_progress")
-                    logger.info(f"Progress: {len(current_completed)}/{max_systems} systems completed")
+                    save_progress(
+                        output_dir, current_completed, max_systems, status="in_progress"
+                    )
+                    logger.info(
+                        f"Progress: {len(current_completed)}/{max_systems} systems completed"
+                    )
 
         # Wait for process to complete
         return_code = process.wait()
@@ -196,14 +214,18 @@ def run_single_baseline_experiment(
         # Final progress update
         final_completed = get_completed_systems(output_dir)
         save_progress(output_dir, final_completed, max_systems, status="completed")
-        logger.info(f"Experiment completed: {len(final_completed)}/{max_systems} systems finished")
+        logger.info(
+            f"Experiment completed: {len(final_completed)}/{max_systems} systems finished"
+        )
 
     except KeyboardInterrupt:
         # Handle keyboard interrupt gracefully
         logger.warning("Experiment interrupted by user")
         current_completed = get_completed_systems(output_dir)
         save_progress(output_dir, current_completed, max_systems, status="interrupted")
-        logger.info(f"Saved progress: {len(current_completed)}/{max_systems} systems completed")
+        logger.info(
+            f"Saved progress: {len(current_completed)}/{max_systems} systems completed"
+        )
         raise
     except subprocess.CalledProcessError as e:
         logger.error(f"Error running experiment {agent_config}: {e}", exc_info=True)
@@ -214,8 +236,11 @@ def run_single_baseline_experiment(
         with open(output_dir / "error.log", "w") as f:
             f.write(f"Error: {str(e)}\n")
             import traceback
+
             f.write(traceback.format_exc())
-        logger.info(f"Saved partial results: {len(current_completed)}/{max_systems} systems completed")
+        logger.info(
+            f"Saved partial results: {len(current_completed)}/{max_systems} systems completed"
+        )
         raise
     except Exception as e:
         logger.error(f"Error running experiment {agent_config}: {e}", exc_info=True)
@@ -226,8 +251,11 @@ def run_single_baseline_experiment(
         with open(output_dir / "error.log", "w") as f:
             f.write(f"Error: {str(e)}\n")
             import traceback
+
             f.write(traceback.format_exc())
-        logger.info(f"Saved partial results: {len(current_completed)}/{max_systems} systems completed")
+        logger.info(
+            f"Saved partial results: {len(current_completed)}/{max_systems} systems completed"
+        )
         raise
 
     logger.info(f"Completed experiment: {agent_config}")
@@ -250,6 +278,7 @@ def run_multiple_baseline_experiments(
     wandb_tags: list[str] | None = None,
     continue_on_error: bool = True,
     resume: bool = True,
+    hydra_overrides: list[str] | None = None,
 ) -> dict[str, Path | None]:
     """
     Run multiple baseline experiments.
@@ -274,9 +303,9 @@ def run_multiple_baseline_experiments(
     results: dict[str, Path | None] = {}
 
     for agent_config in agent_configs:
-        logger.info(f"\n{'='*80}")
+        logger.info(f"\n{'=' * 80}")
         logger.info(f"Running experiment: {agent_config}")
-        logger.info(f"{'='*80}")
+        logger.info(f"{'=' * 80}")
 
         # Use first systems_file if provided, otherwise None (will use config default)
         systems_file = systems_files[0] if systems_files else None
@@ -297,6 +326,7 @@ def run_multiple_baseline_experiments(
                 wandb_project=wandb_project,
                 wandb_tags=wandb_tags,
                 resume=resume,
+                hydra_overrides=hydra_overrides,
             )
             results[agent_config] = output_dir
         except Exception as e:
@@ -391,6 +421,12 @@ def main():
         help="Wandb tags",
     )
     parser.add_argument(
+        "--hydra-overrides",
+        nargs="+",
+        default=None,
+        help="Additional Hydra overrides passed to run_multi_systems",
+    )
+    parser.add_argument(
         "--stop-on-error",
         action="store_true",
         help="Stop on first error instead of continuing",
@@ -443,12 +479,13 @@ def main():
         wandb_tags=args.wandb_tags,
         continue_on_error=not args.stop_on_error,
         resume=args.resume,
+        hydra_overrides=args.hydra_overrides,
     )
 
     # Print summary
-    logger.info("\n" + "="*80)
+    logger.info("\n" + "=" * 80)
     logger.info("Experiment Summary")
-    logger.info("="*80)
+    logger.info("=" * 80)
     for agent_config, output_dir in results.items():
         status = "SUCCESS" if output_dir else "FAILED"
         logger.info(f"  {agent_config}: {status}")
@@ -459,15 +496,15 @@ def main():
             if progress_file.exists():
                 with open(progress_file) as f:
                     progress = json.load(f)
-                    logger.info(f"    Progress: {progress.get('status', 'unknown')} - {len(progress.get('completed_systems', []))}/{progress.get('total_systems', 0)} systems")
+                    logger.info(
+                        f"    Progress: {progress.get('status', 'unknown')} - {len(progress.get('completed_systems', []))}/{progress.get('total_systems', 0)} systems"
+                    )
 
     # Save summary
     summary_file = Path(timestamped_output_dir) / "experiments_summary.json"
     summary_file.parent.mkdir(parents=True, exist_ok=True)
     summary = {
-        "results": {
-            k: str(v) if v else None for k, v in results.items()
-        },
+        "results": {k: str(v) if v else None for k, v in results.items()},
         "args": vars(args),
     }
     with open(summary_file, "w") as f:

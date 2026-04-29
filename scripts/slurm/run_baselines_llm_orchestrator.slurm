@@ -180,5 +180,6 @@ uv run scripts/run_baseline_experiments.py \
   --budget 50 \
   --num-episodes 3 \
   --use-wandb \
-  ++agent.llm_config.model="openai/QuantTrio/Qwen3.5-9B-AWQ" \
-  ++agent.llm_config.base_url="${OPENAI_BASE_URL}"
+  --hydra-overrides \
+  agent.llm_config.model="openai/QuantTrio/Qwen3.5-9B-AWQ" \
+  agent.llm_config.base_url="${OPENAI_BASE_URL}"
