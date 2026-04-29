@@ -101,14 +101,22 @@ if ! command -v uv >/dev/null 2>&1; then
   exit 1
 fi
 
-python - <<'PY'
+VLLM_VENV_PATH="${VLLM_VENV_PATH:-${PWD}/.vllm}"
+VLLM_PYTHON="${VLLM_VENV_PATH}/bin/python"
+
+if [[ ! -x "${VLLM_PYTHON}" ]]; then
+  echo "vLLM venv not found: ${VLLM_VENV_PATH}" >&2
+  exit 1
+fi
+
+"${VLLM_PYTHON}" - <<'PY'
 import importlib
 import sys
 
 try:
     importlib.import_module("vllm")
 except Exception as exc:
-    print(f"vllm import failed: {exc}", file=sys.stderr)
+    print(f"vllm import failed in vLLM venv: {exc}", file=sys.stderr)
     raise
 PY
 
@@ -126,7 +134,7 @@ cleanup_vllm() {
 }
 trap cleanup_vllm EXIT
 
-python -m vllm.entrypoints.openai.api_server \
+"${VLLM_PYTHON}" -m vllm.entrypoints.openai.api_server \
   --host "${VLLM_HOST}" \
   --port "${VLLM_PORT}" \
   --model "${MODEL_NAME}" \

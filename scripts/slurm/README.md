@@ -25,6 +25,7 @@ Notes:
 - Use `CHEMELEON_TASK=csp|dng` to prefer checkpoints matching the task name.
 - Empty legacy tarballs in `CHEMELEON_CKPT_DIR` are removed automatically.
 - The LLM scripts start and stop their own vLLM instance.
+- Set `VLLM_VENV_PATH` to point at a dedicated vLLM virtualenv (default: `${PWD}/.vllm`).
 - The vLLM server listens on `127.0.0.1:8000` by default; adjust `OPENAI_BASE_URL`
   if your endpoint is different.
 - The model id is set to `openai/Qwen/Qwen3.5-27B-GPTQ-Int4` so DSPy routes to the
