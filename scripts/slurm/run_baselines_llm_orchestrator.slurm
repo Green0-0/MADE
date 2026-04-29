@@ -120,7 +120,7 @@ except Exception as exc:
     raise
 PY
 
-export MODEL_NAME="Qwen/Qwen3.5-27B-GPTQ-Int4"
+export MODEL_NAME="QuantTrio/Qwen3.5-9B-AWQ"
 export VLLM_HOST="127.0.0.1"
 export VLLM_PORT="8000"
 export OPENAI_BASE_URL="http://${VLLM_HOST}:${VLLM_PORT}/v1"
@@ -139,7 +139,7 @@ trap cleanup_vllm EXIT
   --port "${VLLM_PORT}" \
   --model "${MODEL_NAME}" \
   --gpu-memory-utilization 0.90 \
-  --max-model-len 4096 &
+  --max-model-len 16384 &
 VLLM_PID=$!
 
 python - <<'PY'
@@ -148,7 +148,7 @@ import time
 import urllib.request
 
 url = "http://127.0.0.1:8000/v1/models"
-deadline = time.time() + 300
+deadline = time.time() + 600
 last_error = None
 
 while time.time() < deadline:
@@ -178,5 +178,5 @@ uv run scripts/run_baseline_experiments.py \
   --budget 50 \
   --num-episodes 3 \
   --use-wandb \
-  ++agent.llm_config.model="openai/Qwen/Qwen3.5-27B-GPTQ-Int4" \
+  ++agent.llm_config.model="openai/QuantTrio/Qwen3.5-9B-AWQ" \
   ++agent.llm_config.base_url="${OPENAI_BASE_URL}"
