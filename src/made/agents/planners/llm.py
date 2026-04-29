@@ -211,6 +211,18 @@ class LLMPlanner(Planner):
             num_candidates=self.num_candidates,
         )
 
+    def get_state(self) -> dict[str, Any]:
+        """Get full state including history for checkpointing."""
+        return {"history": self.history}  # Full history
+
+    def load_state(self, state: dict[str, Any]) -> None:
+        """Load full state including history from checkpoint."""
+        if "history" in state:
+            self.history = state["history"]
+
+    def update_state(self, state: dict[str, Any]) -> None:
+        pass
+
 
 def _recover_llm_json(text: str) -> dict[str, Any]:
     payload = _extract_json_object(text)
@@ -246,15 +258,3 @@ def _extract_json_object(text: str) -> str:
     if match:
         return match.group(0)
     return text
-
-    def get_state(self) -> dict[str, Any]:
-        """Get full state including history for checkpointing."""
-        return {"history": self.history}  # Full history
-
-    def load_state(self, state: dict[str, Any]) -> None:
-        """Load full state including history from checkpoint."""
-        if "history" in state:
-            self.history = state["history"]
-
-    def update_state(self, state: dict[str, Any]) -> None:
-        pass
