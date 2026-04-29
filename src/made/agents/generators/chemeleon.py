@@ -81,9 +81,14 @@ class ChemeleonGenerator(Generator):
             model_path = get_checkpoint_path(
                 self.task, sample.DEFAULT_MODEL_PATH, **ckpt_kwargs
             )
-        self.dm = DiffusionModule.load_from_checkpoint(
-            model_path, map_location=self.device
-        )
+        try:
+            self.dm = DiffusionModule.load_from_checkpoint(
+                model_path, map_location=self.device, weights_only=False
+            )
+        except TypeError:
+            self.dm = DiffusionModule.load_from_checkpoint(
+                model_path, map_location=self.device
+            )
         logger.info(f"Loaded Chemeleon model from {model_path}")
 
     def generate(self, plan: Plan, state: dict[str, Any]) -> list[Structure]:
