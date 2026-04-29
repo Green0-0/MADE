@@ -68,7 +68,7 @@ class CompositionPlannerSignature(dspy.Signature):
         desc="e_above_hull threshold for stability. Structures with e_above_hull <= this are stable/metastable."
     )
 
-    compositions: list[str] = dspy.OutputField(
+    compositions: list[str] | str = dspy.OutputField(
         desc="List of compositions to explore next. e.g. ['Na2O', 'NaO3']. These should be unique from each other."
     )
 
